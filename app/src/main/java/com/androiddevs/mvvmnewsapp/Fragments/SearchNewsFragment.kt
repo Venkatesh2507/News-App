@@ -17,7 +17,6 @@ import com.androiddevs.mvvmnewsapp.NewsViewModal
 import com.androiddevs.mvvmnewsapp.R
 import com.androiddevs.mvvmnewsapp.Resources
 import com.androiddevs.mvvmnewsapp.adapters.NewsAdapter
-import kotlinx.android.synthetic.main.fragment_breaking_news.rvBreakingNews
 import kotlinx.android.synthetic.main.fragment_search_news.etSearch
 import kotlinx.android.synthetic.main.fragment_search_news.paginationProgressBar
 import kotlinx.android.synthetic.main.fragment_search_news.rvSearchNews
@@ -65,7 +64,7 @@ class SearchNewsFragment : Fragment(R.layout.fragment_search_news) {
                         val totalPages = newsResponse.totalResults / Constants.QUERY_PAGE_SIZE + 2
                         isLastPage = viewModal.searchNewsPage == totalPages
                         if (isLastPage) {
-                            rvBreakingNews.setPadding(0, 0, 0, 0)
+                            rvSearchNews.setPadding(0, 0, 0, 0)
                         }
                     }
                 }
