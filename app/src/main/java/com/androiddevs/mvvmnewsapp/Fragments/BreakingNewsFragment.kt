@@ -2,9 +2,15 @@ package com.androiddevs.mvvmnewsapp.Fragments
 
 import android.content.ContentValues.TAG
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.text.method.MetaKeyKeyListener.handleKeyDown
+import android.text.method.MetaKeyKeyListener.handleKeyUp
 import android.util.Log
+import android.view.KeyEvent
 import android.view.View
 import android.widget.AbsListView
+import android.widget.Toast
 import androidx.core.widget.NestedScrollView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
@@ -23,11 +29,19 @@ import kotlinx.android.synthetic.main.fragment_breaking_news.rvBreakingNews
 class BreakingNewsFragment : Fragment(R.layout.fragment_breaking_news) {
     lateinit var viewModal: NewsViewModal
     lateinit var newsAdapter : NewsAdapter
+    private val TAG = "BreakingNewsFragment"
+    private var isLongPressingDpadDown = false
+    private val longPressThreshold = 2000L
+    private val handler = Handler(Looper.getMainLooper())
+    private val longPressRunnable = Runnable {
+        if (isLongPressingDpadDown) {
+            refreshBreakingNews()
+        }
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         viewModal = (activity as MainActivity).viewModal
-
-
         setupRecyclerView()
         newsAdapter.setOnItemClickListener {
             val bundle = Bundle().apply {
@@ -38,12 +52,24 @@ class BreakingNewsFragment : Fragment(R.layout.fragment_breaking_news) {
                 bundle
             )
         }
+
+        // Set OnKeyListener to handle DPAD events
+        view.isFocusableInTouchMode = true
+        view.requestFocus()
+        rvBreakingNews.setOnKeyListener { _, keyCode, event ->
+            when (event.action) {
+                KeyEvent.ACTION_DOWN -> handleKeyPadDown(keyCode)
+                KeyEvent.ACTION_UP -> handleKeyPadUp(keyCode)
+                else -> false
+            }
+        }
         viewModal.breakingNews.observe(viewLifecycleOwner, Observer {response->
            when(response){
                is Resources.Success->{
                    hideProgressBar()
                    response.data?.let {newsResponse ->
                        newsAdapter.differ.submitList(newsResponse.articles?.toList())
+                       Log.d(TAG, "Result Success onViewCreated: ${newsResponse.articles?.toList()}")
                        val totalPages = newsResponse.totalResults/ QUERY_PAGE_SIZE + 2
                        isLastPage = viewModal.breakingNewsPage == totalPages
                        if (isLastPage){
@@ -54,7 +80,7 @@ class BreakingNewsFragment : Fragment(R.layout.fragment_breaking_news) {
                is Resources.Error->{
                    hideProgressBar()
                    response.message?.let { message->
-                       Log.d("Breaking News Fragment", "An error occured $message")
+                       Log.d("Breaking News Fragment", "An error occurred $message")
                    }
                }
                is Resources.Loading->{
@@ -64,16 +90,35 @@ class BreakingNewsFragment : Fragment(R.layout.fragment_breaking_news) {
         })
     }
 
+    private fun handleKeyPadDown(keyCode: Int): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN && !isLongPressingDpadDown) {
+            isLongPressingDpadDown = true
+            handler.postDelayed(longPressRunnable, longPressThreshold)
+        }
+
+        return true
+    }
+    private fun handleKeyPadUp(keyCode: Int): Boolean{
+        if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+            isLongPressingDpadDown = false
+            handler.removeCallbacks(longPressRunnable)
+        }
+        else{
+            refreshBreakingNews()
+        }
+
+        return true
+    }
+
+
     private fun hideProgressBar() {
        paginationProgressBar.visibility = View.INVISIBLE
-
         isLoading = false
 
     }
     private fun showProgressBar() {
        paginationProgressBar.visibility = View.VISIBLE
         isLoading = true
-
     }
 
     var isLoading = false
@@ -93,7 +138,7 @@ class BreakingNewsFragment : Fragment(R.layout.fragment_breaking_news) {
             val isTotalMoreThanVisible = totalItemCount>=QUERY_PAGE_SIZE
             val shouldPaginate = isNotLoadingAndNotLastPage && isLastItem && isNotAtBeginning && isTotalMoreThanVisible && isScrolling
             if (shouldPaginate){
-                viewModal.getBreakingNews("in")
+                viewModal.getBreakingNews("us")
                 isScrolling = false
 
             }
@@ -107,7 +152,12 @@ class BreakingNewsFragment : Fragment(R.layout.fragment_breaking_news) {
             }
         }
     }
-
+    private fun refreshBreakingNews() {
+        Toast.makeText(requireContext(), "Refreshing news...", Toast.LENGTH_SHORT).show()
+        showProgressBar()
+        viewModal.getBreakingNews("us")
+        hideProgressBar()
+    }
 
 
     private fun setupRecyclerView(){

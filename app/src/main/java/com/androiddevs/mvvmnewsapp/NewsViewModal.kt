@@ -1,5 +1,6 @@
 package com.androiddevs.mvvmnewsapp
 
+import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -21,7 +22,7 @@ var breakingNewsPage = 1
 
 
     init {
-        getBreakingNews("in")
+        getBreakingNews("us")
     }
     fun getBreakingNews(countryCode : String) = viewModelScope.launch {
         breakingNews.postValue(Resources.Loading())
@@ -47,6 +48,7 @@ var breakingNewsPage = 1
                     if (newArticles != null) {
                         oldArticles?.addAll(newArticles)
                     }
+                    Log.d("NewsViewModal", "handleBreakingNewsResponse: $oldArticles")
                 }
                 return Resources.Success(breakingNewsResponse ?:resultResponse)
             }
